@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>
+!(function(j,a,g){j.__itrace_conf = {bid: 'f43basl8-6nqu7l3w',rel: '0.0.1', spa: true, uid: '', plugins:['jserror','interface','perf','resource','flow','blank']};var b = a.createElement("script");var d = a.getElementsByTagName("script")[0];b.type = "text/javascript";b.crossorigin = true;b.async = true;b.onload = function(){j.__itrace && j.__itrace.setReady()};d.parentNode.insertBefore(b,d);b.src = g})(window, document, "https://g.alicdn.com/woodpeckerx/itrace-next/itrace.iife.js")
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>NFC工具清点</title>
+<meta name="theme-color" content="#1a1a2e">
+<link rel="manifest" href="manifest.json">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#1a1a2e;color:#e0e0e0;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+/* SECTION: header */
+.hd{padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));background:#16213e;border-bottom:1px solid #0f3460;display:flex;align-items:center;flex-shrink:0;position:relative}
+.hd h1{flex:1;text-align:center;font-size:18px;font-weight:700;color:#e0e0e0}
+.hd-back{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#00d4aa;font-size:14px;cursor:pointer;padding:8px;display:none}
+.hd-ver{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:10px;color:#475569;margin-top:6px;cursor:pointer;padding:4px 6px}
+.hd-ver:active{color:#60a5fa}
+
+/* SECTION: status-bar */
+.sbar{display:flex;align-items:center;gap:10px;padding:10px 16px;margin:12px 16px 0;background:#16213e;border-radius:10px;border:1px solid #0f3460}
+.sdot{width:10px;height:10px;border-radius:50%;background:#334155;flex-shrink:0;transition:background .3s}
+.sdot.on{background:#00d4aa;animation:pulse 1.2s infinite}
+.sdot.chk{background:#f59e0b;animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.stxt{flex:1;font-size:13px;color:#94a3b8}
+.stxt.on{color:#00d4aa}
+.stxt.chk{color:#f59e0b}
+.scnt{font-size:20px;font-weight:800;color:#e0e0e0;font-variant-numeric:tabular-nums;flex-shrink:0}
+
+/* SECTION: buttons */
+.btns{display:flex;gap:8px;padding:10px 16px;flex-wrap:wrap;flex-shrink:0}
+.btn{flex:1;min-width:0;padding:14px 8px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;min-height:48px;transition:transform .1s,opacity .2s;display:flex;align-items:center;justify-content:center;gap:4px}
+.btn:active:not(:disabled){transform:scale(.96)}
+.btn:disabled{opacity:.25;cursor:not-allowed}
+.b-rec{background:#0f3460;color:#00d4aa;border:1px solid #00d4aa}
+.b-end{background:#ef4444;color:#fff}
+.b-chk{background:#f59e0b;color:#1a1a2e}
+.b-clr{background:transparent;color:#94a3b8;border:1px solid #334155;font-size:13px}
+.b-hist{background:#16213e;color:#60a5fa;border:1px solid #0f3460;font-size:14px;flex:1;margin-top:4px}
+
+/* SECTION: scroll */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 16px}
+
+/* SECTION: table */
+.tbl{margin-top:10px;border-radius:10px;overflow:hidden;border:1px solid #0f3460}
+.tbl-hd{display:flex;background:#16213e;padding:10px 12px}
+.tbl-col{flex:1;text-align:center;font-size:13px;font-weight:700}
+.tbl-col-l{color:#00d4aa}
+.tbl-col-r{color:#f59e0b}
+.tbl-bd{background:#0d1b3e;max-height:45vh;overflow-y:auto}
+.row{display:flex;padding:9px 12px;border-top:1px solid rgba(15,52,96,.5);align-items:center;min-height:38px;transition:all .5s ease}
+.row.hide{opacity:0;max-height:0;padding:0 12px;min-height:0;overflow:hidden;border:none}
+.cell{flex:1;font-size:13px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:2px 0}
+.cell-l{color:#e0e0e0}
+.cell-r{color:#f59e0b}
+.cell-miss{color:#ef4444;font-weight:600}
+.cell-done{color:#334155;font-size:11px}
+.tbl-div-cell{width:1px;background:#0f3460;margin:0 6px;flex-shrink:0;align-self:stretch}
+.empty{text-align:center;padding:28px 16px;color:#475569;font-size:13px;line-height:1.7}
+
+/* SECTION: stats */
+.stats{display:flex;justify-content:space-around;padding:12px;margin-top:10px;background:#16213e;border-radius:10px;border:1px solid #0f3460}
+.st{text-align:center}
+.st-n{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.st-l{font-size:11px;color:#64748b;margin-top:2px}
+.n-ok{color:#00d4aa}.n-miss{color:#ef4444}.n-total{color:#00d4aa}
+
+/* SECTION: history-page */
+.hist-page{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 16px}
+.hist-item{display:flex;align-items:center;padding:14px 16px;margin-bottom:8px;background:#16213e;border-radius:10px;border:1px solid #0f3460;cursor:pointer;transition:transform .1s}
+.hist-item:active{transform:scale(.98)}
+.hist-name{flex:1;font-size:15px;font-weight:600;color:#e0e0e0}
+.hist-status{font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;flex-shrink:0;margin-left:8px}
+.hs-pending{background:rgba(245,158,11,.15);color:#f59e0b}
+.hs-ok{background:rgba(0,212,170,.15);color:#00d4aa}
+.hs-err{background:rgba(239,68,68,.15);color:#ef4444}
+.hist-detail{margin-top:12px;padding:14px;background:#16213e;border-radius:10px;border:1px solid #0f3460}
+.hist-detail-title{font-size:16px;font-weight:700;color:#e0e0e0;margin-bottom:8px}
+.hist-detail-meta{font-size:12px;color:#64748b;margin-bottom:12px}
+.hist-detail-tbl{margin-bottom:12px}
+.hist-btn-row{display:flex;gap:8px;margin-top:12px}
+.hist-empty{text-align:center;padding:40px 16px;color:#475569;font-size:14px;line-height:1.7}
+
+/* SECTION: warn/info */
+.bwarn{display:none;background:#7c2d12;border:1px solid #9a3412;border-radius:10px;padding:12px;margin:12px 16px 0}
+.bwarn.show{display:block}
+.bwarn-t{font-size:14px;font-weight:700;color:#fed7aa;margin-bottom:4px}
+.bwarn-d{font-size:12px;color:#fdba74;line-height:1.6}
+.ibar{display:none;align-items:center;gap:10px;padding:10px 14px;margin:12px 16px 0;background:#1e3a5f;border:1px solid #1e40af;border-radius:10px;cursor:pointer}
+.ibar.show{display:flex}
+.ibar-t{font-size:13px;font-weight:600;color:#93c5fd}
+.ibar-s{font-size:11px;color:#60a5fa;margin-top:2px}
+.ibar-btn{background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+.info{margin-top:14px;padding-top:12px;border-top:1px solid #0f3460}
+.inf-b{margin-bottom:10px}
+.inf-b h3{font-size:11px;font-weight:600;color:#64748b;margin-bottom:3px}
+.inf-b p{font-size:11px;color:#475569;line-height:1.6}
+.hl{color:#f59e0b;font-weight:600}
+
+/* SECTION: toast */
+.tw{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:999;pointer-events:none}
+.tm{background:#16213e;color:#e0e0e0;padding:8px 18px;border-radius:8px;font-size:12px;border:1px solid #0f3460;box-shadow:0 4px 14px rgba(0,0,0,.4);opacity:0;transform:translateY(-6px);transition:all .3s}
+.tm.show{opacity:1;transform:translateY(0)}
+.tm.ok{border-color:rgba(0,212,170,.4);color:#00d4aa}
+.tm.err{border-color:rgba(239,68,68,.4);color:#f87171}
+
+/* SECTION: changelog-modal */
+.clg-mask{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.clg-mask.show{display:flex}
+.clg-box{background:#16213e;border:1px solid #0f3460;border-radius:14px;width:100%;max-width:420px;max-height:75vh;display:flex;flex-direction:column;overflow:hidden}
+.clg-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #0f3460;flex-shrink:0}
+.clg-title{font-size:15px;font-weight:700;color:#e0e0e0}
+.clg-close{background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;padding:4px 8px;line-height:1}
+.clg-body{flex:1;overflow-y:auto;padding:12px 16px;-webkit-overflow-scrolling:touch}
+.clg-sep{border:none;border-top:1px solid #0f3460;margin:10px 0}
+.clg-v{font-size:13px;font-weight:700;color:#60a5fa;margin-bottom:3px}
+.clg-d{font-size:12px;color:#94a3b8;line-height:1.5}
+
+/* SECTION: dingtalk-ui */
+.dt-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(15,52,96,.5)}
+.dt-row.dt-col{flex-direction:column;align-items:stretch;gap:6px}
+.dt-label{flex:1;font-size:13px;color:#94a3b8}
+.dt-row.dt-col .dt-label{flex:none}
+.dt-input{background:#0d1b3e;border:1px solid #0f3460;border-radius:8px;color:#e0e0e0;font-size:13px;padding:10px;width:100%;min-height:42px}
+.dt-toggle{border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;min-height:38px;background:rgba(148,163,184,.15);color:#94a3b8}
+.dt-toggle.on{background:rgba(0,212,170,.18);color:#00d4aa}
+.dt-btns{display:flex;gap:8px;margin-top:12px}
+.dt-half{flex:1;font-size:14px;padding:12px 8px}
+.dt-note{margin-top:14px}
+.dt-note p{font-size:11px;color:#64748b;line-height:1.7;margin-bottom:8px}
+.sync-tag{font-size:10px;padding:3px 7px;border-radius:5px;margin-left:6px;flex-shrink:0}
+.sy-none{background:rgba(148,163,184,.12);color:#64748b}
+.sy-sent{background:rgba(0,212,170,.15);color:#00d4aa}
+.sy-fail{background:rgba(239,68,68,.15);color:#f87171}
+.sy-wait{background:rgba(245,158,11,.15);color:#f59e0b}
+.b-dt{background:#16213e;color:#f59e0b;border:1px solid #0f3460;font-size:14px;flex:1;margin-top:4px}
+
+@media(min-width:768px){.scroll,.hist-page,.btns,.sbar,.bwarn,.ibar{max-width:520px;margin-left:auto;margin-right:auto}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SECTION: header -->
+<div class="hd">
+<button class="hd-back" id="hdBack">← 返回</button>
+<h1 id="hdTitle">🔧 NFC 工具清点</h1>
+<button class="hd-ver" id="btnVer">V1.028</button>
+</div>
+
+<!-- ===== MAIN VIEW ===== -->
+<div id="mainView">
+
+<div class="bwarn" id="bwarn">
+<div class="bwarn-t">⚠️ 当前浏览器不支持 NFC</div>
+<div class="bwarn-d">请使用 Chrome、Edge、三星浏览器、Brave 或 Opera。Safari / Firefox / UC / QQ 不支持。</div>
+</div>
+
+<div class="ibar" id="ibar">
+<div style="font-size:22px">📲</div>
+<div style="flex:1"><div class="ibar-t">安装到手机桌面</div><div class="ibar-s">全屏运行，像原生App一样</div></div>
+<button class="ibar-btn" id="installBtn">安装</button>
+</div>
+
+<div class="sbar">
+<div class="sdot" id="sDot"></div>
+<div class="stxt" id="sTxt">准备就绪</div>
+<div class="scnt" id="sCnt">0</div>
+</div>
+
+<div class="btns" id="btnArea">
+<button class="btn b-rec" id="btnRec">📋 记录</button>
+<button class="btn b-end" id="btnEnd1" style="display:none">⏹ 结束</button>
+<button class="btn b-chk" id="btnChk" style="display:none">🔍 清点</button>
+<button class="btn b-end" id="btnEnd2" style="display:none">⏹ 结束</button>
+<button class="btn b-clr" id="btnClr" style="display:none">🗑 清空</button>
+</div>
+
+<div class="scroll">
+<div class="tbl" id="tblArea" style="display:none">
+<div class="tbl-hd">
+<div class="tbl-col tbl-col-l">📋 记录 (<span id="hdL">0</span>)</div>
+<div class="tbl-div-cell" style="height:auto"></div>
+<div class="tbl-col tbl-col-r">🔍 清点 (<span id="hdR">0</span>)</div>
+</div>
+<div class="tbl-bd" id="tblBody"></div>
+</div>
+<div class="stats" id="statsArea" style="display:none">
+<div class="st"><div class="st-n n-total" id="stTotal">0</div><div class="st-l">记录总数</div></div>
+<div class="st"><div class="st-n n-ok" id="stOk">0</div><div class="st-l">已清点</div></div>
+<div class="st"><div class="st-n n-miss" id="stMiss">0</div><div class="st-l">遗漏</div></div>
+</div>
+<div class="info">
+<div class="inf-b"><h3>📌 使用方法</h3>
+<p>1. NFC编辑器给每张215贴纸写入工具名称（NDEF Text格式）<br>2. 点「记录」→ 逐一贴触 → 点「结束」<br>3. 点「清点」→ 逐一贴触 → 匹配项实时从两侧消失<br>4. 点「结束」查看遗漏 · 点「清空」重新开始</p></div>
+<div class="inf-b"><h3>📱 浏览器要求</h3>
+<p>需要 <span class="hl">Chromium 内核浏览器</span>：Chrome / Edge / 三星 / Brave / Opera。建议安装到桌面。</p></div>
+</div>
+</div>
+
+<!-- 历史记录入口按钮 -->
+<div class="btns" style="padding-top:0">
+<button class="btn b-hist" id="btnHist">📂 历史记录</button>
+<button class="btn b-dt" id="btnDt">⚙️ 钉钉同步</button>
+</div>
+
+</div><!-- /mainView -->
+
+<!-- ===== HISTORY VIEW ===== -->
+<div class="hist-page" id="histView">
+<div id="histList"></div>
+<div id="histDetail" style="display:none"></div>
+</div>
+
+</div><!-- /app -->
+
+<!-- SECTION: changelog-modal -->
+<div class="clg-mask" id="clgMask">
+<div class="clg-box">
+<div class="clg-hd">
+<span class="clg-title">📋 版本更新日志</span>
+<button class="clg-close" id="clgClose">✕</button>
+</div>
+<div class="clg-body" id="clgBody"></div>
+</div>
+</div>
+
+<!-- SECTION: dingtalk-modal -->
+<div class="clg-mask" id="dtMask">
+<div class="clg-box">
+<div class="clg-hd">
+<span class="clg-title">⚙️ 钉钉同步设置</span>
+<button class="clg-close" id="dtClose">✕</button>
+</div>
+<div class="clg-body">
+<div class="dt-row"><span class="dt-label">启用同步到钉钉</span><button class="dt-toggle" id="dtEnabled">已关闭</button></div>
+<div class="dt-row dt-col"><span class="dt-label">机器人 Webhook 地址</span><input class="dt-input" id="dtHook" type="text" inputmode="url" autocomplete="off" placeholder="https://oapi.dingtalk.com/robot/send?access_token=..."></div>
+<div class="dt-row"><span class="dt-label">安全校验方式</span><select class="dt-input" id="dtSec" style="flex:none;width:55%"><option value="keyword">自定义关键词</option><option value="sign">加签（密钥）</option></select></div>
+<div class="dt-row dt-col"><span class="dt-label">关键词（群机器人里填的那个，默认「工具清点」）</span><input class="dt-input" id="dtKw" type="text" autocomplete="off" placeholder="工具清点"></div>
+<div class="dt-row dt-col" id="dtSecRow" style="display:none"><span class="dt-label">加签密钥 Secret</span><input class="dt-input" id="dtSecret" type="text" autocomplete="off" placeholder="以 SEC 开头的密钥"></div>
+<div class="dt-row"><span class="dt-label">结束后自动同步</span><button class="dt-toggle on" id="dtAuto">已开启</button></div>
+<div class="dt-btns">
+<button class="btn b-rec dt-half" id="dtTest">🧪 发送测试</button>
+<button class="btn b-chk dt-half" id="dtSave">💾 保存设置</button>
+</div>
+<div class="dt-btns">
+<button class="btn b-clr" id="dtRetry" style="flex:1">🔄 重发失败与待同步（<span id="dtQn">0</span>）</button>
+</div>
+<div class="dt-note">
+<p><b>取 Webhook：</b>钉钉群 → 群设置 → 智能群助手 → 添加机器人 → 自定义；安全设置勾选「自定义关键词」并填 <span class="hl">工具清点</span>，复制 Webhook 粘贴到上方。</p>
+<p><b>关于送达：</b>受浏览器跨域限制，网页读不到钉钉的返回内容。请求一旦发出即已送达钉钉服务器，最终以群里是否收到消息为准；网络异常的条目会自动进入待同步队列并重试（最多 3 次）。</p>
+<p><b>关于加签：</b>选「加签」需通过 https 打开本页（GitHub Pages 默认满足）；若设备不支持在线签名计算，请改用「自定义关键词」方式。</p>
+<p><b>限流：</b>钉钉机器人每分钟最多 20 条，本工具已按每条间隔 0.5 秒排队发送。</p>
+</div>
+</div>
+</div>
+</div>
+
+<div class="tw" id="tw"><div class="tm" id="tm"></div></div>
+
+<script>
+'use strict';
+
+/* ===== SECTION: state ===== */
+var PHASE='idle',rec=[],chk=[],matchIds={},ndef=null,scanning=false,lastTs=0,CD=300,aCtx=null,ipEvt=null;
+var VIEW='main'; // main | history | detail
+var activeHistId=null; // 当前查看的历史记录ID
+
+/* ===== SECTION: history-storage ===== */
+var HIST_KEY='nfc_history_v1';
+
+function loadHistory(){
+  try{var d=localStorage.getItem(HIST_KEY);return d?JSON.parse(d):[]}catch(e){return[]}
+}
+function saveHistory(list){
+  try{localStorage.setItem(HIST_KEY,JSON.stringify(list))}catch(e){}
+}
+
+/**
+ * 保存一条历史记录
+ * data格式: {rec:[...], chk:[...], matchIds:{...}, status:'pending'|'ok'|'error'}
+ * 同时保留exportData字段，为未来钉钉推送做准备
+ */
+function saveHistEntry(name,data){
+  var list=loadHistory();
+  var entry={
+    id:'h_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    name:name,
+    status:data.status,
+    createdAt:Date.now(),
+    rec:data.rec,
+    chk:data.chk||[],
+    matchIds:data.matchIds||{},
+    missCount:data.missCount||0,
+    totalCount:data.rec.length,
+    // exportData: 为未来钉钉/外部系统推送预留的结构化数据
+    exportData:{
+      version:'1.028',
+      timestamp:Date.now(),
+      name:name,
+      status:data.status,
+      tools:data.rec.map(function(t){return{name:t.name,id:t.id}}),
+      checked:data.chk?data.chk.map(function(t){return{name:t.name,id:t.id}}):[],
+      missed:(data.chk&&data.chk.length>0)?data.rec.filter(function(t){return!data.matchIds[t.id]}).map(function(t){return t.name}):[]
+    }
+  };
+  list.unshift(entry); // 最新的在最上面
+  saveHistory(list);
+  try{dtAutoSync(entry)}catch(e){}
+  return entry;
+}
+
+function getHistById(id){
+  var list=loadHistory();
+  for(var i=0;i<list.length;i++){if(list[i].id===id)return list[i]}
+  return null;
+}
+
+function updateHistStatus(id,newStatus,newChk,newMatchIds,missCount){
+  var list=loadHistory(),target=null;
+  for(var i=0;i<list.length;i++){
+    if(list[i].id===id){
+      list[i].status=newStatus;
+      list[i].chk=newChk||list[i].chk;
+      list[i].matchIds=newMatchIds||list[i].matchIds;
+      list[i].missCount=missCount!==undefined?missCount:list[i].missCount;
+      // 更新exportData
+      list[i].exportData.status=newStatus;
+      list[i].exportData.checked=list[i].chk.map(function(t){return{name:t.name,id:t.id}});
+      list[i].exportData.missed=list[i].rec.filter(function(t){return!list[i].matchIds[t.id]}).map(function(t){return t.name});
+      list[i].exportData.timestamp=Date.now();
+      target=list[i];
+      break;
+    }
+  }
+  saveHistory(list);
+  if(target){try{dtAutoSync(target)}catch(e){}}
+}
+
+function getTodayName(){
+  var d=new Date();
+  var y=d.getFullYear();
+  var m=('0'+(d.getMonth()+1)).slice(-2);
+  var day=('0'+d.getDate()).slice(-2);
+  return y+'-'+m+'-'+day;
+}
+
+function fmtDateTime(ts){
+  var d=new Date(ts);
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+
+function statusLabel(s){
+  if(s==='pending')return{text:'已记录待清点',cls:'hs-pending'};
+  if(s==='ok')return{text:'清点无遗漏',cls:'hs-ok'};
+  if(s==='error')return{text:'清点状态异常',cls:'hs-err'};
+  return{text:'未知',cls:'hs-pending'};
+}
+
+/* ===== SECTION: util ===== */
+function $(id){return document.getElementById(id)}
+function escH(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function initA(){if(!aCtx)try{aCtx=new(window.AudioContext||window.webkitAudioContext)}catch(e){}}
+function beep(f,d){if(!aCtx)return;try{var o=aCtx.createOscillator(),g=aCtx.createGain();o.connect(g);g.connect(aCtx.destination);o.frequency.value=f;o.type='sine';g.gain.setValueAtTime(.1,aCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,aCtx.currentTime+d);o.start();o.stop(aCtx.currentTime+d)}catch(e){}}
+function vib(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+var tTmr=null;
+function toast(t,tp){var el=$('tm');el.textContent=t;el.className='tm'+(tp?' '+tp:'');void el.offsetWidth;el.classList.add('show');clearTimeout(tTmr);tTmr=setTimeout(function(){el.classList.remove('show')},1600)}
+function tagId(sn,name){if(name&&name.length>0)return'n:'+name;if(sn&&sn.length>0)return's:'+sn.join('-');return'u:'+Date.now()+'-'+Math.random().toString(36).slice(2,6)}
+
+/* ===== SECTION: view-switch ===== */
+function showMain(){
+  VIEW='main';activeHistId=null;
+  $('mainView').style.display='block';
+  $('histView').style.display='none';
+  $('hdBack').style.display='none';
+  $('hdTitle').textContent='🔧 NFC 工具清点';
+  updUI();
+}
+
+function showHistory(){
+  VIEW='history';activeHistId=null;
+  $('mainView').style.display='none';
+  $('histView').style.display='block';
+  $('hdBack').style.display='block';
+  $('hdTitle').textContent='📂 历史记录';
+  $('histDetail').style.display='none';
+  renderHistList();
+}
+
+function showDetail(id){
+  VIEW='detail';activeHistId=id;
+  $('hdTitle').textContent='📋 记录详情';
+  renderHistDetail(id);
+}
+
+/* ===== SECTION: render-history-list ===== */
+function renderHistList(){
+  var list=loadHistory();
+  var el=$('histList');
+  if(!list.length){
+    el.innerHTML='<div class="hist-empty">暂无历史记录<br><br>完成一次记录或清点后<br>数据会自动保存在这里</div>';
+    return;
+  }
+  var h='';
+  for(var i=0;i<list.length;i++){
+    var item=list[i];
+    var st=statusLabel(item.status);
+    h+='<div class="hist-item" data-id="'+escH(item.id)+'">';
+    h+='<div class="hist-name">'+escH(item.name)+'</div>';
+    h+='<div class="hist-status '+st.cls+'">'+st.text+'</div>';
+    h+=dtSyncTag(item);
+    h+='</div>';
+  }
+  el.innerHTML=h;
+
+  // 绑定点击事件
+  var items=el.querySelectorAll('.hist-item');
+  for(var j=0;j<items.length;j++){
+    items[j].addEventListener('click',function(){
+      showDetail(this.getAttribute('data-id'));
+    });
+  }
+}
+
+/* ===== SECTION: render-history-detail ===== */
+function renderHistDetail(id){
+  var item=getHistById(id);
+  var el=$('histDetail');
+  if(!item){el.innerHTML='<div class="hist-empty">记录不存在</div>';el.style.display='block';return}
+
+  var st=statusLabel(item.status);
+  var missCount=0;
+  if(item.status!=='pending'){
+    for(var i=0;i<item.rec.length;i++){if(!item.matchIds[item.rec[i].id])missCount++}
+  }
+
+  var h='<div class="hist-detail">';
+  h+='<div class="hist-detail-title">'+escH(item.name)+'</div>';
+  h+='<div class="hist-detail-meta">';
+  h+='保存于 '+fmtDateTime(item.createdAt)+' · ';
+  h+='共 '+item.totalCount+' 件工具';
+  if(item.status!=='pending')h+=' · 遗漏 '+missCount+' 件';
+  h+=' · 钉钉同步：'+(item.syncState==='sent'?'已同步':(item.syncState==='fail'?'失败':(item.syncState==='wait'?'待同步':'未同步')));
+  h+='</div>';
+
+  // 状态标签
+  h+='<div style="margin-bottom:12px"><span class="hist-status '+st.cls+'" style="display:inline-block;padding:6px 14px;font-size:13px">'+st.text+'</span></div>';
+
+  // 工具列表表格
+  h+='<div class="hist-detail-tbl"><div class="tbl" style="margin-top:0">';
+  h+='<div class="tbl-hd"><div class="tbl-col tbl-col-l">📋 记录 ('+item.rec.length+')</div>';
+  h+='<div class="tbl-div-cell" style="height:auto"></div>';
+  h+='<div class="tbl-col tbl-col-r">🔍 清点 ('+(item.chk?item.chk.length:0)+')</div></div>';
+  h+='<div class="tbl-bd" style="max-height:35vh">';
+
+  // 构建清点副本
+  var cc=[];
+  if(item.chk){for(var c=0;c<item.chk.length;c++)cc.push({id:item.chk[c].id,name:item.chk[c].name,used:false})}
+
+  for(var i=0;i<item.rec.length;i++){
+    var r=item.rec[i];
+    var matched=!!item.matchIds[r.id];
+    var cls=matched?'row hide':'row';
+    var rn='';
+    if(matched){for(var j=0;j<cc.length;j++){if(!cc[j].used&&cc[j].id===r.id){rn=cc[j].name;cc[j].used=true;break}}}
+    h+='<div class="'+cls+'">';
+    h+='<div class="cell '+(matched?'cell-done':'cell-l')+'">'+(matched?'✓ ':'')+escH(r.name)+'</div>';
+    h+='<div class="tbl-div-cell"></div>';
+    h+='<div class="cell '+(matched?'cell-done':(rn?'cell-r':'cell-miss'))+'">';
+    h+=matched?(rn?'✓ '+escH(rn):'—'):(rn?escH(rn):'—');
+    h+='</div></div>';
+  }
+  h+='</div></div></div>';
+
+  // 操作按钮
+  h+='<div class="hist-btn-row">';
+  if(item.status==='pending'){
+    h+='<button class="btn b-chk" id="btnResumeChk" style="flex:1">🔍 继续清点</button>';
+  }
+  h+='<button class="btn b-clr" id="btnBackList" style="flex:1">← 返回列表</button>';
+  h+='</div>';
+  h+='<div class="hist-btn-row">';
+  h+='<button class="btn b-dt" id="btnSyncCur" style="flex:1;padding:12px 8px">📤 同步到钉钉</button>';
+  h+='<button class="btn b-clr" id="btnCopyData" style="flex:1;padding:12px 8px">📋 复制JSON数据</button>';
+  h+='</div>';
+  h+='</div>';
+
+  el.innerHTML=h;
+  el.style.display='block';
+  $('histList').style.display='none';
+
+  // 绑定事件
+  var btnResume=$('btnResumeChk');
+  if(btnResume){
+    btnResume.addEventListener('click',function(){resumeFromHistory(id)});
+  }
+  var btnSyncCur=$('btnSyncCur');
+  if(btnSyncCur){
+    btnSyncCur.addEventListener('click',function(){
+      var c=dtCfg();
+      if(!c.webhook||!dtHookOk(c.webhook)){toast('请先填写并保存 Webhook','err');dtOpenCfg();return}
+      if(!c.enabled){c.enabled=true;dtSaveCfg(c)}
+      dtEnqueue(id);
+      toast('已加入同步队列，稍后查看状态','ok');
+    });
+  }
+  var btnCopyData=$('btnCopyData');
+  if(btnCopyData){
+    btnCopyData.addEventListener('click',function(){dtCopy(item)});
+  }
+  $('btnBackList').addEventListener('click',function(){
+    $('histDetail').style.display='none';
+    $('histList').style.display='block';
+    $('hdTitle').textContent='📂 历史记录';
+    VIEW='history';activeHistId=null;
+  });
+}
+
+/* ===== SECTION: resume-from-history ===== */
+function resumeFromHistory(id){
+  var item=getHistById(id);
+  if(!item||item.status!=='pending'){toast('该记录状态不支持继续清点','err');return}
+
+  // 加载数据到当前状态
+  rec=item.rec.slice();
+  chk=[];
+  matchIds={};
+  activeHistId=id; // 记住来源，清点结束时更新此条记录
+  PHASE='recorded';
+
+  showMain();
+  toast('已加载「'+item.name+'」的记录数据，请点击「清点」继续','ok');
+}
+
+/* ===== SECTION: main-ui-update ===== */
+function updUI(){
+  var dot=$('sDot'),txt=$('sTxt'),cnt=$('sCnt');
+  dot.className='sdot';txt.className='stxt';
+  switch(PHASE){
+    case'idle':txt.textContent='准备就绪';cnt.textContent='0';break;
+    case'recording':dot.classList.add('on');txt.classList.add('on');txt.textContent='正在记录…贴触NFC标签';cnt.textContent=rec.length;break;
+    case'recorded':txt.textContent='记录完成 · '+rec.length+'件';cnt.textContent=rec.length;break;
+    case'checking':dot.classList.add('chk');txt.classList.add('chk');txt.textContent='正在清点…贴触NFC标签';cnt.textContent=chk.length;break;
+    case'done':var m=0;for(var i=0;i<rec.length;i++)if(!matchIds[rec[i].id])m++;txt.textContent='清点完成';cnt.textContent=m>0?'遗漏'+m:'✓全齐';break;
+  }
+  $('btnRec').style.display=PHASE==='idle'?'flex':'none';
+  $('btnEnd1').style.display=PHASE==='recording'?'flex':'none';
+  $('btnChk').style.display=PHASE==='recorded'?'flex':'none';
+  $('btnEnd2').style.display=PHASE==='checking'?'flex':'none';
+  $('btnClr').style.display=(PHASE==='recorded'||PHASE==='done')?'flex':'none';
+  // 历史记录按钮只在idle或recorded或done时显示
+  $('btnHist').style.display=(PHASE==='idle'||PHASE==='recorded'||PHASE==='done')?'flex':'none';
+  renderTbl();
+}
+
+/* ===== SECTION: render-table ===== */
+function renderTbl(){
+  var area=$('tblArea'),body=$('tblBody'),sts=$('statsArea');
+  if(PHASE==='idle'){area.style.display='none';sts.style.display='none';return}
+  area.style.display='block';
+  var total=rec.length,mc=Object.keys(matchIds).length,miss=total-mc;
+  $('hdL').textContent=total;
+  $('hdR').textContent=(PHASE==='checking'||PHASE==='done')?chk.length:'—';
+  var cc=[];for(var c=0;c<chk.length;c++)cc.push({id:chk[c].id,name:chk[c].name,used:false});
+  var h='';
+  for(var i=0;i<rec.length;i++){
+    var r=rec[i],matched=!!matchIds[r.id],cls=matched?'row hide':'row';
+    var rn='';
+    if(matched){for(var j=0;j<cc.length;j++){if(!cc[j].used&&cc[j].id===r.id){rn=cc[j].name;cc[j].used=true;break}}}
+    h+='<div class="'+cls+'">';
+    h+='<div class="cell '+(matched?'cell-done':'cell-l')+'">'+(matched?'✓ ':'')+escH(r.name)+'</div>';
+    h+='<div class="tbl-div-cell"></div>';
+    h+='<div class="cell '+(matched?'cell-done':(rn?'cell-r':'cell-miss'))+'">';
+    h+=matched?(rn?'✓ '+escH(rn):'—'):(rn?escH(rn):'—');
+    h+='</div></div>';
+  }
+  if(!rec.length)h='<div class="empty">暂无记录</div>';
+  body.innerHTML=h;
+  if(PHASE==='checking'||PHASE==='done'){sts.style.display='flex';$('stTotal').textContent=total;$('stOk').textContent=mc;$('stMiss').textContent=miss}
+  else sts.style.display='none';
+}
+
+/* ===== SECTION: nfc ===== */
+async function startNFC(){
+  if(scanning)return;initA();
+  if(!('NDEFReader' in window)){toast('浏览器不支持NFC','err');return}
+  try{ndef=new NDEFReader();await ndef.scan();scanning=true;ndef.onreading=onRead;ndef.onreadingerror=function(){}}
+  catch(e){var m='NFC启动失败';if(e.name==='NotAllowedError')m='请授权NFC权限';else if(e.name==='NotSupportedError')m='设备不支持NFC';toast(m,'err')}
+}
+function stopNFC(){scanning=false;try{if(ndef){ndef.onreading=null;ndef.onreadingerror=null}}catch(e){}ndef=null}
+
+function onRead(ev){
+  var now=Date.now();if(now-lastTs<CD)return;lastTs=now;
+  var sn=ev.serialNumber||'',recs=ev.message&&ev.message.records?ev.message.records:[],name='';
+  for(var i=0;i<recs.length;i++){try{var r=recs[i];if(r.recordType==='text'&&r.data){name=(typeof r.data==='string')?r.data:new TextDecoder('utf-8').decode(r.data);if(name)break}}catch(e){}}
+  if(!name)name=sn?'UID:'+sn:'标签'+now.toString(36);
+  name=name.trim();var id=tagId(sn,name);
+  if(PHASE==='recording'){
+    for(var j=0;j<rec.length;j++)if(rec[j].id===id)return;
+    rec.push({id:id,name:name,ts:Date.now()});vib([60]);beep(880,.1);toast('记录: '+name,'ok');updUI();
+  }else if(PHASE==='checking'){
+    for(var k=0;k<chk.length;k++)if(chk[k].id===id)return;
+    var hit=false;
+    for(var m=0;m<rec.length;m++){if(rec[m].id===id&&!matchIds[id]){matchIds[id]=true;hit=true;break}}
+    chk.push({id:id,name:name,ts:Date.now()});vib([60]);
+    if(hit){beep(1047,.15);toast('✓ '+name,'ok')}else{beep(440,.2);toast('⚠ 新标签: '+name,'err')}
+    updUI();
+  }
+}
+
+/* ===== SECTION: button-events ===== */
+$('btnRec').onclick=function(){PHASE='recording';rec=[];chk=[];matchIds={};activeHistId=null;startNFC();updUI()};
+
+$('btnEnd1').onclick=function(){
+  stopNFC();PHASE='recorded';updUI();
+  if(rec.length>0){
+    // 自动保存历史记录（已记录待清点）
+    var name=getTodayName();
+    // 如果同一天已存在pending记录，加序号
+    var list=loadHistory();
+    var sameDayCount=0;
+    for(var i=0;i<list.length;i++){if(list[i].name.indexOf(name)===0)sameDayCount++}
+    if(sameDayCount>0)name=name+' ('+sameDayCount+')';
+    var entry=saveHistEntry(name,{rec:rec,chk:[],matchIds:{},status:'pending',missCount:0});
+    activeHistId=entry.id;
+    toast('已记录'+rec.length+'件 · 已保存到历史','ok');
+  }else{
+    toast('未记录到标签','err');
+  }
+};
+
+$('btnChk').onclick=function(){PHASE='checking';chk=[];matchIds={};startNFC();updUI()};
+
+$('btnEnd2').onclick=function(){
+  stopNFC();PHASE='done';updUI();
+  var m=0;for(var i=0;i<rec.length;i++)if(!matchIds[rec[i].id])m++;
+  var status=m===0?'ok':'error';
+
+  // 保存或更新历史记录
+  if(activeHistId){
+    // 从历史记录恢复的清点 → 更新该条记录
+    updateHistStatus(activeHistId,status,chk,matchIds,m);
+    toast(m===0?'清点完成 · 无遗漏':'清点完成 · 遗漏'+m+'件',m===0?'ok':'err');
+  }else{
+    // 新建一条清点完成的历史记录
+    var name=getTodayName()+' 清点';
+    var list=loadHistory();
+    var sameDayCount=0;
+    for(var i=0;i<list.length;i++){if(list[i].name.indexOf(name)===0)sameDayCount++}
+    if(sameDayCount>0)name=name+' ('+sameDayCount+')';
+    saveHistEntry(name,{rec:rec,chk:chk,matchIds:matchIds,status:status,missCount:m});
+    toast(m===0?'清点完成 · 无遗漏':'清点完成 · 遗漏'+m+'件',m===0?'ok':'err');
+  }
+  if(m===0)beep(1047,.25);else beep(440,.3);
+};
+
+$('btnClr').onclick=function(){PHASE='idle';rec=[];chk=[];matchIds={};activeHistId=null;updUI();toast('已清空','ok')};
+
+$('btnHist').onclick=function(){showHistory()};
+$('hdBack').onclick=function(){
+  if(VIEW==='detail'){
+    $('histDetail').style.display='none';
+    $('histList').style.display='block';
+    $('hdTitle').textContent='📂 历史记录';
+    VIEW='history';activeHistId=null;
+  }else{
+    showMain();
+  }
+};
+
+/* ===== SECTION: pwa ===== */
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();ipEvt=e;$('ibar').classList.add('show')});
+$('installBtn').onclick=async function(){if(!ipEvt)return;ipEvt.prompt();var r=await ipEvt.userChoice;if(r.outcome==='accepted'){$('ibar').classList.remove('show');toast('已安装','ok')}ipEvt=null};
+window.addEventListener('appinstalled',function(){$('ibar').classList.remove('show')});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+
+/* ===== SECTION: dingtalk-sync ===== */
+var DT_CFG='nfc_dt_cfg_v1',DT_QUEUE='nfc_dt_queue_v1',dtBusy=false;
+
+function dtCfg(){
+  var d={enabled:false,webhook:'',sec:'keyword',keyword:'工具清点',secret:'',auto:true};
+  try{var s=localStorage.getItem(DT_CFG);
+    if(s){var o=JSON.parse(s);if(o&&typeof o==='object'){for(var k in d){if(o[k]!==undefined&&typeof o[k]===typeof d[k])d[k]=o[k]}}}
+  }catch(e){}
+  if(typeof d.keyword!=='string'||!d.keyword.trim())d.keyword='工具清点';
+  return d;
+}
+function dtSaveCfg(c){try{localStorage.setItem(DT_CFG,JSON.stringify(c));return true}catch(e){return false}}
+function dtQueue(){var a=[];try{var s=localStorage.getItem(DT_QUEUE);if(s)a=JSON.parse(s)}catch(e){}return Array.isArray(a)?a:[]}
+function dtSetQueue(a){if(!Array.isArray(a))a=[];if(a.length>80)a=a.slice(0,80);try{localStorage.setItem(DT_QUEUE,JSON.stringify(a))}catch(e){}}
+function dtHookOk(u){return /^https:\/\/oapi\.dingtalk\.com\/robot\/send\?access_token=[0-9a-zA-Z]+/.test(String(u||'').trim())}
+
+function dtB64(buf){var b=new Uint8Array(buf),s='';for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s)}
+function dtSign(secret,ts){
+  if(!(window.crypto&&window.crypto.subtle))return Promise.reject(new Error('当前环境不支持在线签名，请改用关键词方式'));
+  var enc=new TextEncoder();
+  return window.crypto.subtle.importKey('raw',enc.encode(secret),{name:'HMAC',hash:'SHA-256',length:enc.encode(secret).length*8},false,['sign'])
+    .then(function(k){return window.crypto.subtle.sign('HMAC',k,enc.encode(ts+'\n'+secret))})
+    .then(function(sig){return dtB64(sig)});
+}
+
+function dtStatusText(s){return s==='ok'?'清点无遗漏':(s==='error'?'清点状态异常':'已记录待清点')}
+function dtMissList(item){
+  var m=[],mid=(item&&item.matchIds)?item.matchIds:{};
+  for(var i=0;i<item.rec.length;i++){if(!mid[item.rec[i].id])m.push(item.rec[i].name)}
+  return m;
+}
+function dtBuildText(item){
+  var L=[];
+  L.push('#### 🔧 NFC 工具清点 · '+item.name);
+  L.push('- 状态：**'+dtStatusText(item.status)+'**');
+  L.push('- 时间：'+fmtDateTime(item.createdAt));
+  L.push('- 记录总数：'+item.totalCount+' 件');
+  if(item.status==='pending'){
+    L.push('- 清点进度：待清点');
+  }else{
+    L.push('- 已清点：'+(item.chk?item.chk.length:0)+' 件');
+    L.push('- 遗漏：'+(item.missCount||0)+' 件');
+    var miss=dtMissList(item);
+    if(miss.length)L.push('- 遗漏工具：'+miss.slice(0,25).join('、')+(miss.length>25?(' 等共 '+miss.length+' 件'):''));
+  }
+  var names=item.rec.slice(0,40).map(function(t){return t.name}).join('、');
+  L.push('- 工具清单：'+names+(item.rec.length>40?(' 等共 '+item.rec.length+' 件'):''));
+  var txt=L.join('\n\n');
+  if(txt.length>3600)txt=txt.slice(0,3600)+'\n\n（内容过长已截断，完整数据请在网页查看）';
+  return txt;
+}
+function dtPayload(cfg,item){
+  var kw=String(cfg.keyword||'工具清点').trim();
+  var text=dtBuildText(item);
+  var title=('工具清点 '+item.name).slice(0,60);
+  if(kw){
+    if(text.indexOf(kw)<0)text='**'+kw+'**\n\n'+text;
+    if(title.indexOf(kw)<0)title=kw+' '+title;
+  }
+  return {msgtype:'markdown',markdown:{title:title.slice(0,60),text:text}};
+}
+function dtFinalUrl(cfg,signed){
+  var u=String(cfg.webhook||'').trim();
+  if(signed)u+=(u.indexOf('?')>=0?'&':'?')+'timestamp='+signed.ts+'&sign='+encodeURIComponent(signed.sign);
+  return u;
+}
+function dtTimeout(p,ms){
+  return new Promise(function(res,rej){
+    var t=setTimeout(function(){rej(new Error('请求超时'))},ms);
+    p.then(function(v){clearTimeout(t);res(v)},function(e){clearTimeout(t);rej(e)});
+  });
+}
+/**
+ * 发送一条钉钉消息。
+ * 浏览器跨域限制下使用 no-cors 简单请求：请求可真实送达钉钉，但响应不可读(opaque)。
+ * 因此 opaque / ok 都视为“已发出”，只有网络层异常才判定失败。
+ */
+function dtSend(item){
+  var cfg=dtCfg();
+  if(!cfg.webhook)return Promise.reject(new Error('未填写 Webhook 地址'));
+  if(!dtHookOk(cfg.webhook))return Promise.reject(new Error('Webhook 地址格式不正确'));
+  var body;
+  try{body=JSON.stringify(dtPayload(cfg,item))}catch(e){return Promise.reject(new Error('数据组装失败'))}
+  var chain=Promise.resolve(null);
+  var needSign=(cfg.sec==='sign'&&String(cfg.secret||'').trim().length>0);
+  if(needSign){
+    var ts=Date.now();
+    chain=dtSign(String(cfg.secret).trim(),ts).then(function(sg){return{ts:ts,sign:sg}});
+  }
+  return chain.then(function(signed){
+    if(needSign&&!signed)throw new Error('加签计算失败，请改用关键词方式');
+    return dtTimeout(fetch(dtFinalUrl(cfg,signed),{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:body,
+      mode:'no-cors',
+      credentials:'omit',
+      cache:'no-store'
+    }),12000);
+  }).then(function(res){
+    if(res&&res.type==='opaque')return 'opaque';
+    if(res&&res.ok)return 'ok';
+    return 'fail';
+  });
+}
+
+function dtMark(histId,state){
+  var list=loadHistory(),t=null;
+  for(var i=0;i<list.length;i++){
+    if(list[i].id===histId){list[i].syncState=state;list[i].syncAt=Date.now();t=list[i];break}
+  }
+  saveHistory(list);
+  return t;
+}
+function dtAutoSync(entry){
+  var c=dtCfg();
+  if(!c.enabled||!c.auto||!c.webhook)return;
+  dtEnqueue(entry.id);
+}
+function dtEnqueue(histId){
+  var q=dtQueue(),hit=false;
+  for(var i=0;i<q.length;i++){if(q[i].histId===histId){q[i].try=0;q[i].ts=Date.now();hit=true}}
+  if(!hit)q.unshift({histId:histId,try:0,ts:Date.now()});
+  dtSetQueue(q);dtMark(histId,'wait');dtRefreshQn();dtFlush();
+}
+function dtFlush(){
+  if(dtBusy)return;
+  var c=dtCfg();
+  if(!c.enabled||!c.webhook)return;
+  if(!dtQueue().length)return;
+  dtBusy=true;dtPump();
+}
+function dtPump(){
+  var q=dtQueue();
+  if(!q.length){dtBusy=false;dtRefreshQn();dtRepaint();return}
+  var task=q[0],item=getHistById(task.histId);
+  if(!item){q.shift();dtSetQueue(q);dtPump();return}
+  dtSend(item).then(function(kind){
+    var q2=dtQueue();if(q2.length)q2.shift();dtSetQueue(q2);
+    dtMark(task.histId,kind==='fail'?'fail':'sent');
+    dtRefreshQn();setTimeout(dtPump,500);
+  },function(err){
+    var q2=dtQueue();
+    if(q2.length){
+      q2[0].try=(q2[0].try||0)+1;
+      if(q2[0].try>=3){var id=q2[0].histId;q2.shift();dtSetQueue(q2);dtMark(id,'fail')}
+      else dtSetQueue(q2);
+    }
+    dtRefreshQn();setTimeout(dtPump,2000);
+  });
+}
+function dtRepaint(){
+  if(VIEW==='history')renderHistList();
+  else if(VIEW==='detail'&&activeHistId)renderHistDetail(activeHistId);
+}
+function dtRefreshQn(){var el=$('dtQn');if(el)el.textContent=dtQueue().length}
+function dtSyncTag(item){
+  if(item.syncState==='sent')return '<span class="sync-tag sy-sent">已同步</span>';
+  if(item.syncState==='fail')return '<span class="sync-tag sy-fail">同步失败</span>';
+  if(item.syncState==='wait')return '<span class="sync-tag sy-wait">待同步</span>';
+  return '<span class="sync-tag sy-none">未同步</span>';
+}
+
+/* ---------- 设置面板 ---------- */
+function dtToggleEl(el,on,onTxt,offTxt){el.textContent=on?onTxt:offTxt;el.className='dt-toggle'+(on?' on':'');el.setAttribute('data-on',on?'1':'0')}
+function dtIsOn(el){return el.getAttribute('data-on')==='1'}
+function dtReadForm(){
+  var c=dtCfg();
+  c.enabled=dtIsOn($('dtEnabled'));
+  c.auto=dtIsOn($('dtAuto'));
+  c.webhook=$('dtHook').value.trim();
+  c.keyword=$('dtKw').value.trim()||'工具清点';
+  c.secret=$('dtSecret').value.trim();
+  c.sec=$('dtSec').value;
+  return c;
+}
+function dtOpenCfg(){
+  var c=dtCfg();
+  $('dtHook').value=c.webhook;
+  $('dtKw').value=c.keyword;
+  $('dtSecret').value=c.secret;
+  $('dtSec').value=c.sec;
+  dtToggleEl($('dtEnabled'),c.enabled,'已启用','已关闭');
+  dtToggleEl($('dtAuto'),c.auto,'已开启','已关闭');
+  $('dtSecRow').style.display=(c.sec==='sign')?'':'none';
+  dtRefreshQn();
+  $('dtMask').classList.add('show');
+}
+function dtCloseCfg(){$('dtMask').classList.remove('show')}
+
+function dtCopy(item){
+  var data={
+    version:'1.028',source:'NFC工具清点 · 网页版',exportType:'history-item',
+    item:{
+      name:item.name,status:dtStatusText(item.status),time:fmtDateTime(item.createdAt),
+      total:item.totalCount,checked:item.chk?item.chk.length:0,
+      missed:dtMissList(item),tools:item.rec.map(function(t){return t.name})
+    }
+  };
+  var txt;try{txt=JSON.stringify(data,null,2)}catch(e){toast('数据导出失败','err');return}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){toast('JSON 数据已复制，可直接粘贴到钉钉','ok')},function(){dtCopyFallback(txt)});
+  }else dtCopyFallback(txt);
+}
+function dtCopyFallback(txt){
+  try{
+    var ta=document.createElement('textarea');
+    ta.value=txt;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.top='-999px';
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    toast('JSON 数据已复制','ok');
+  }catch(e){toast('复制失败，请改用截图或手动记录','err')}
+}
+
+$('btnDt').addEventListener('click',dtOpenCfg);
+$('dtClose').addEventListener('click',dtCloseCfg);
+$('dtMask').addEventListener('click',function(e){if(e.target===$('dtMask'))dtCloseCfg()});
+$('dtEnabled').addEventListener('click',function(){dtToggleEl(this,!dtIsOn(this),'已启用','已关闭')});
+$('dtAuto').addEventListener('click',function(){dtToggleEl(this,!dtIsOn(this),'已开启','已关闭')});
+$('dtSec').addEventListener('change',function(){$('dtSecRow').style.display=(this.value==='sign')?'':'none'});
+$('dtSave').addEventListener('click',function(){
+  var c=dtReadForm();
+  if(c.enabled&&!dtHookOk(c.webhook)){toast('Webhook 地址不正确，请从钉钉群机器人复制','err');return}
+  if(c.enabled&&c.sec==='sign'&&!c.secret){toast('加签方式需要填写密钥','err');return}
+  if(!dtSaveCfg(c)){toast('保存失败，浏览器存储不可用','err');return}
+  dtSaveCfg(c);
+  toast('钉钉设置已保存','ok');
+  dtRefreshQn();
+  setTimeout(dtCloseCfg,500);
+  if(c.enabled&&c.webhook)dtFlush();
+});
+$('dtTest').addEventListener('click',function(){
+  var c=dtReadForm();
+  if(!dtHookOk(c.webhook)){toast('Webhook 地址不正确','err');return}
+  if(c.sec==='sign'&&!c.secret){toast('请填写加签密钥','err');return}
+  dtSaveCfg(c);
+  var probe={id:'dt_probe',name:'连通性测试',status:'pending',createdAt:Date.now(),totalCount:1,
+    rec:[{id:'dt_probe_t',name:'示例工具',ts:Date.now()}],chk:[],matchIds:{},missCount:0};
+  toast('正在发送测试消息…');
+  dtSend(probe).then(function(k){
+    toast(k==='fail'?'未发送成功，请检查地址与网络':'测试已发出，请到钉钉群确认收到','ok');
+  },function(e){toast('测试失败：'+((e&&e.message)||'网络异常'),'err')});
+});
+$('dtRetry').addEventListener('click',function(){
+  var c=dtCfg();
+  if(!c.webhook||!dtHookOk(c.webhook)){toast('请先保存正确的 Webhook','err');dtOpenCfg();return}
+  var list=loadHistory(),q=[];
+  for(var i=0;i<list.length;i++){
+    if(list[i].syncState==='fail'||list[i].syncState==='wait')q.push({histId:list[i].id,try:0,ts:Date.now()});
+  }
+  if(!q.length){toast('没有需要同步的记录','err');return}
+  if(!c.enabled){c.enabled=true;dtSaveCfg(c)}
+  for(var j=0;j<list.length;j++){if(list[j].syncState==='fail')list[j].syncState='wait'}
+  saveHistory(list);
+  dtSetQueue(q);dtBusy=false;dtRefreshQn();dtFlush();
+  toast('已重新排队 '+q.length+' 条','ok');
+});
+
+/* ===== SECTION: changelog ===== */
+var CHANGELOG=[
+{v:'V1.028',d:'新增钉钉数据同步：记录、清点、历史三类数据可在结束后自动推送到钉钉群机器人，支持「自定义关键词」与「加签」两种安全校验方式，含待同步队列、失败自动重试与逐条同步状态标记。'},
+{v:'V1.027',d:'新增历史记录功能：自动保存每次记录与清点数据，支持查看历史详情、从"已记录待清点"状态继续清点，避免数据丢失。预留钉钉数据推送接口。'},
+{v:'V1.026',d:'调试历史记录模块：修复存储读写边界情况，优化状态流转逻辑，确保记录与清点数据在不同阶段切换时的一致性。'},
+{v:'V1.025',d:'修正若干交互Bug：修复清点模式下偶发的重复标签误判、状态栏显示不同步等问题，提升整体操作流畅度。'},
+{v:'V1.024',d:'尝试新增功能预留代码：为后续历史记录、数据导出等模块预留接口和数据结构，降低后续迭代的改动成本。'},
+{v:'V1.023',d:'稳定性测试：针对长时间连续扫描场景进行压力测试，优化内存占用和NFC连接回收机制。'},
+{v:'V1.022',d:'新功能扩展页面框架：重构页面布局结构，为历史记录页面、版本日志弹窗等功能模块搭建UI骨架。'},
+{v:'V1.021',d:'小程序架构稳定性更新：优化NFC适配器初始化流程，增加异常断线重连机制，减少扫描中断的概率。'},
+{v:'V1.02 ★ 大版本更新',d:'记录与清点核心功能全部验证通过，正式发布可用版本。支持NFC 215标签连续扫描、0.3秒去重、实时两列对比表格（匹配项自动消失）。'},
+{v:'V1.019',d:'清点功能测试：验证清点模式下标签匹配算法的正确性，确认去重冷却时间在不同设备上的表现。'},
+{v:'V1.018',d:'修正记录功能错误：修复部分设备上NFC读取后标签名称解析异常的问题，增加UTF-8/UTF-16双编码兼容。'},
+{v:'V1.017',d:'修正对比功能错误：修复两列表格中匹配项消失动画在特定情况下不同步的Bug，优化DOM更新策略。'},
+{v:'V1.016',d:'预载对比功能：实现记录与清点数据的实时比对算法，两列表格中匹配项带过渡动画自动隐藏。'},
+{v:'V1.015',d:'预载清点功能：搭建清点模式的完整交互流程，包括NFC监听、数据匹配、结果统计等核心模块。'},
+{v:'V1.014',d:'扩展代码架构，预留清点功能模块的接口和数据通道，为后续功能拆分做好准备。'},
+{v:'V1.013',d:'稳定性测试：覆盖不同Android机型和Chrome版本，验证Web NFC API的兼容性和NDEF解析的鲁棒性。'},
+{v:'V1.012',d:'稳定性测试：优化音频反馈和震动反馈在不同设备上的触发一致性，修复部分机型无声的问题。'},
+{v:'V1.011',d:'记录功能现在可以正常结束了：修复结束按钮在特定状态下无响应的Bug，确保扫描后数据完整保存。'},
+{v:'V1.01 ★ 大版本更新',d:'成功实现NFC 215卡片数据的稳定读取，解决了Android系统对重复NFC触发的限制问题，避免了每次贴触弹出应用选择框。这是项目的重要突破。'},
+{v:'V1.009',d:'记录功能最终测试：验证连续扫描场景下的数据完整性，确认去重机制在高频贴触时的可靠性。'},
+{v:'V1.008',d:'记录功能增加"结束"按钮：扫描完成后可手动停止NFC监听，整理并展示已记录的工具列表。'},
+{v:'V1.007',d:'预留结束功能资源：为停止扫描、数据整理等后续交互预留UI组件和逻辑接口。'},
+{v:'V1.006',d:'记录功能实现方向3测试：尝试基于NDEFReader.onreading事件回调的方案，验证其在Chromium浏览器中的可行性。'},
+{v:'V1.005',d:'记录功能实现方向2测试：尝试基于NFC轮询的方案，因浏览器环境限制未达预期效果。'},
+{v:'V1.004',d:'记录功能实现方向1测试：探索通过Intent Filter方式捕获NFC事件，确认Web环境下的技术路径。'},
+{v:'V1.003',d:'记录功能去重处理：增加0.3秒冷却时间和标签唯一性校验，防止同一张贴纸被重复录入。'},
+{v:'V1.002',d:'记录功能初步可用：可以记录NFC标签数据，但存在重复响应问题——每次贴触后系统会重新触发NFC事件，尚未解决。'},
+{v:'V1.001',d:'搭建网页框架：完成页面整体布局，确定各功能模块位置，预留记录、清点、对比等按钮和表格区域。'},
+{v:'V1.000',d:'项目启动：开始进行NFC工具清点应用的开发，确定技术方案为Web NFC + PWA单文件网页应用。'}
+];
+function showChangelog(){
+  var el=$('clgBody'),h='';
+  for(var i=0;i<CHANGELOG.length;i++){
+    if(i>0)h+='<hr class="clg-sep">';
+    h+='<div class="clg-v">'+CHANGELOG[i].v+'</div>';
+    h+='<div class="clg-d">'+CHANGELOG[i].d+'</div>';
+  }
+  el.innerHTML=h;
+  $('clgMask').classList.add('show');
+}
+function hideChangelog(){$('clgMask').classList.remove('show')}
+$('btnVer').addEventListener('click',showChangelog);
+$('clgClose').addEventListener('click',hideChangelog);
+$('clgMask').addEventListener('click',function(e){if(e.target===$('clgMask'))hideChangelog()});
+
+/* ===== SECTION: init ===== */
+(function(){
+  if('NDEFReader' in window)$('bwarn').classList.remove('show');
+  else{$('bwarn').classList.add('show');$('btnRec').disabled=true}
+  showMain();
+  try{dtRefreshQn();dtFlush()}catch(e){}
+})();
+</script>
+</body>
+</html>
